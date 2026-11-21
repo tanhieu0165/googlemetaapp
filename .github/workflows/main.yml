@@ -25,21 +25,43 @@ jobs:
         flutter-version: '3.24.0'
         channel: 'stable'
 
-    - name: Tao moi hoan toan thu muc Android
+    - name: Tao moi thu muc Android va Nang cap Kotlin
       run: |
         rm -rf android
         flutter create . --platforms=android --org click.demo24h
         python3 -c "
-        path = 'android/app/src/main/AndroidManifest.xml'
-        with open(path, 'r', encoding='utf-8') as f:
-            s = f.read()
-        perm = '    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n'
-        if 'android.permission.INTERNET' not in s:
-            s = s.replace('<application', perm + '    <application')
-        if 'android:usesCleartextTraffic' not in s:
-            s = s.replace('<application', '<application\n        android:usesCleartextTraffic=\"true\"')
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(s)
+        import os, re
+        
+        # 1. Nang cap Kotlin len 1.9.24 trong settings.gradle
+        for fpath in ['android/settings.gradle', 'android/settings.gradle.kts']:
+            if os.path.exists(fpath):
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                content = re.sub(r'(\"org\.jetbrains\.kotlin\.android\"\s+version\s+)\"[^\"]+\"', r'\g<1>\"1.9.24\"', content)
+                content = re.sub(r'(\(\"org\.jetbrains\.kotlin\.android\"\)\s+version\s+)\"[^\"]+\"', r'\g<1>\"1.9.24\"', content)
+                with open(fpath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+        
+        # 2. Nang cap ext.kotlin_version trong build.gradle (neu co)
+        if os.path.exists('android/build.gradle'):
+            with open('android/build.gradle', 'r', encoding='utf-8') as f:
+                content = f.read()
+            content = re.sub(r\"ext\.kotlin_version\s*=\s*['\\\"][^'\\\"]+['\\\"]\", \"ext.kotlin_version = '1.9.24'\", content)
+            with open('android/build.gradle', 'w', encoding='utf-8') as f:
+                f.write(content)
+
+        # 3. Cap quyen Internet va Cleartext vao AndroidManifest.xml
+        mpath = 'android/app/src/main/AndroidManifest.xml'
+        if os.path.exists(mpath):
+            with open(mpath, 'r', encoding='utf-8') as f:
+                s = f.read()
+            perm = '    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n'
+            if 'android.permission.INTERNET' not in s:
+                s = s.replace('<application', perm + '    <application')
+            if 'android:usesCleartextTraffic' not in s:
+                s = s.replace('<application', '<application\n        android:usesCleartextTraffic=\"true\"')
+            with open(mpath, 'w', encoding='utf-8') as f:
+                f.write(s)
         "
 
     - name: Cai dat cac thu vien
