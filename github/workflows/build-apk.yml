@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+
+    - name: Khoi tao khung du an Android
+      run: |
+        flutter create . --platforms=android --org click.demo24h --project-name googlemeta_app
+        # Them quyen Internet vao AndroidManifest.xml
+        sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml
+        sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+
+    - name: Cai dat cac thu vien
+      run: flutter pub get
+
+    - name: Tao icon va Man hinh cho Splash Screen
+      run: |
+        flutter pub run flutter_launcher_icons || true
+        flutter pub run flutter_native_splash:create || true
+
+    - name: Build APK Release
+      run: flutter build apk --release
+
+    - name: Upload file APK hoan chinh
+      uses: actions/upload-artifact@v4
+      with:
+        name: googlemeta-release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
